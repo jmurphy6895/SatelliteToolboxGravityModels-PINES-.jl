@@ -14,12 +14,19 @@ is the type of the coefficients in the model.
 ```julia
 function coefficients(model::AbstractGravityModel{T}, degree::Int, order::Int, time::DataTime) where T<:Number -> T, T
 ```
+```julia
+function coefficients(model::AbstractGravityModel{T}, degree::Int, order::Int, JD_Since_JD_J2000::Number) where T<:Number -> T, T
+```
 
 This function must return the coefficients `Clm` and `Slm` of the gravity `model` for the
 specified `degree`, `order`, and `time`. Hence:
 
 ```julia
 coefficients(model, 10, 8, DateTime("2023-06-19"))
+```
+```julia
+coefficients(model, 10, 8, (DateTime("2023-06-19") |> datetime2julia) - JD_J2000)
+coefficients(model, 10, 8, 8569.5)
 ```
 
 must return a `Tuple{T, T}` with the `Clm` and `Slm`, respectively, for the degree 10, order
