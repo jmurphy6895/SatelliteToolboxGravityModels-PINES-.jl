@@ -1,5 +1,6 @@
 module SatelliteToolboxGravityModels
 
+using SatelliteToolboxBase
 using Crayons
 using Dates
 using Downloads

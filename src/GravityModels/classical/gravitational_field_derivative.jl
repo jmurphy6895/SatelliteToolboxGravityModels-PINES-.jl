@@ -5,11 +5,12 @@
 ############################################################################################
 
 """
-    gravitational_field_derivative(model::AbstractGravityModel{T}, r::AbstractVector, time::DateTime = DateTime("2000-01-01"); kwargs...) where T<:Number -> NTuple{3, T}
+    gravitational_field_derivative(model::AbstractGravityModel{T}, r::AbstractVector, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
 
 Compute the gravitational field derivative [SI] with respect to the spherical coordinates
 (`∂U/∂r`, `∂U/∂ϕ`, `∂U/∂λ`) using the `model` in the position `r` [m], represented in ITRF,
-at instant `time`. If the latter argument is omitted, the J2000.0 epoch is used.
+at instant `time`. If the latter argument is omitted, the J2000.0 epoch is used. This will
+be referred to as the classical model.
 
 !!! info
     In this case, `ϕ` is the geocentric latitude and `λ` is the longitude.
@@ -40,9 +41,10 @@ at instant `time`. If the latter argument is omitted, the J2000.0 epoch is used.
 - `T`: The derivative of the gravitational field w.r.t. the longitude (`∂U/∂λ`).
 """
 function gravitational_field_derivative(
-    model::AbstractGravityModel{T},
-    r::AbstractVector,
-    time::DateTime = DateTime("2000-01-01");
+    model::AbstractGravityModel,
+    r::AbstractVector{T},
+    ::Val{:Classical},
+    time_since_JD2000_TT::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -180,7 +182,7 @@ function gravitational_field_derivative(
 
             # == Get the Spherical Harmonics Coefficients ==================================
 
-            clm, slm = coefficients(model, n, m, time)
+            clm, slm = coefficients(model, n, m, time_since_JD2000_TT)
 
             CcSs_nm = clm * cos_mλ + slm * sin_mλ
             ScCs_nm = slm * cos_mλ - clm * sin_mλ

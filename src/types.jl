@@ -18,7 +18,7 @@ end
 struct IcgemGfctCoefficient{T<:Number}
     clm::T
     slm::T
-    time::DateTime
+    time::Number
 
     # == Trend =============================================================================
 
