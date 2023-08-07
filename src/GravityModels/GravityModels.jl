@@ -26,7 +26,9 @@ include("./types.jl")
 ############################################################################################
 
 include("./api.jl")
-include("./accelerations.jl")
-include("./gravitational_field_derivative.jl")
+
+include("./classical/accelerations.jl")
+include("./classical/gravitational_field_derivative.jl")
+include("./classical/gravitational_potential.jl")
 
 end # module GravityModels

@@ -7,7 +7,7 @@
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function GravityModels.coefficients(model::IcgemFile, degree::Int, order::Int, time::DateTime)
+function GravityModels.coefficients(model::IcgemFile, degree::Int, order::Int, time::Number)
     return icgem_coefficients(model, degree, order, time)
 end
 

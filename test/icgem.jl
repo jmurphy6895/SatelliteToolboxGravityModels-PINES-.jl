@@ -12,7 +12,7 @@
 
 @testset "API Support" verbose = true begin
     @testset "Unnormalized Coefficients" begin
-        model = GravityModels.load(IcgemFile, "./icgem_test_files/unnormalized_coefficients.gfc")
+        model = GravityModels.load(IcgemFile, "./test/icgem_test_files/unnormalized_coefficients.gfc")
         @test GravityModels.coefficient_norm(model) == :unnormalized
     end
 end
@@ -73,7 +73,7 @@ end
 #   S_2_2(Δt) = -1.40028528390e-06 +
 #               -3.70169986147e-12 * Δt +
 #               -3.01068425667e-11 * sin(2π * Δt) +
-#               +4.65203150438e-11 * cos(2π * Δt) +
+#               +4.65203150438
 #               +3.73609063085e-12 * sin(4π * Δt) +
 #               -1.83016952664e-12 * cos(4π * Δt)
 #
@@ -97,12 +97,12 @@ end
 
     eigen6c = GravityModels.load(IcgemFile, eigen6c_file)
 
-    Clm, Slm = GravityModels.coefficients(eigen6c, 2, 2, DateTime("2023-06-19"))
+    Clm, Slm = GravityModels.coefficients(eigen6c, 2, 2, (DateTime("2023-06-19") |> datetime2julian) - JD_J2000)
 
     @test Clm ≈ +2.4393378057597012e-6 atol = 1e-20
     @test Slm ≈ -1.400407403685511e-6  atol = 1e-20
 
-    Clm, Slm = GravityModels.coefficients(eigen6c, 100, 1, DateTime("2023-06-19"))
+    Clm, Slm = GravityModels.coefficients(eigen6c, 100, 1, (DateTime("2023-06-19") |> datetime2julian) - JD_J2000)
 
     @test Clm ≈ -1.09755466854e-09 atol = 1e-20
     @test Slm ≈ +6.91287419630e-10 atol = 1e-20
@@ -114,35 +114,35 @@ end
 @testset "Parsing IcgemFile [ERRORS]" verbose = true begin
     @test_throws(
         ErrorException("[Invalid ICGEM file] Two `begin_of_head` keywords were found!"),
-        GravityModels.load(IcgemFile, "./icgem_test_files/two_begin_of_head.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/two_begin_of_head.gfc")
     )
 
     @test_throws(
         ErrorException("[Invalid ICGEM file] The mandatory keyword `end_of_head` was not found!"),
-        GravityModels.load(IcgemFile, "./icgem_test_files/no_end_of_head.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/no_end_of_head.gfc")
     )
 
     @test_throws(
         ErrorException("[Invalid ICGEM file] The following mandatory fields are missing: (:radius, :max_degree)."),
-        GravityModels.load(IcgemFile, "./icgem_test_files/missing_mandatory_fields.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/missing_mandatory_fields.gfc")
     )
 
     @test_logs(
         (:warn, "[Line 18] Invalid data line."),
-        GravityModels.load(IcgemFile, "./icgem_test_files/invalid_data_line.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/invalid_data_line.gfc")
     )
 
     @test_logs(
         (:warn, "[Line 18] Invalid degree: 2a."),
         (:warn, "[Line 19] Invalid order: 1a."),
-        GravityModels.load(IcgemFile, "./icgem_test_files/invalid_degree_and_order.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/invalid_degree_and_order.gfc")
     )
 
     @test_logs(
         (:warn, "[Line 17] Invalid `gfc` data line."),
         (:warn, "[Line 18] Could not parse `Clm` to Float64: -0.18a987635955e-09."),
         (:warn, "[Line 19] Could not parse `Slm` to Float64: -0.1400a6683654e-05."),
-        GravityModels.load(IcgemFile, "./icgem_test_files/invalid_gfc_data_lines.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/invalid_gfc_data_lines.gfc")
     )
 
     @test_logs(
@@ -158,7 +158,7 @@ end
         (:warn, "[Line 59] Could not parse `trend_S` to Float64: 0.0b0000000000e+00."),
         (:warn, "[Line 86] Could not parse `Slm` amplitude to Float64: -1.07328392828e-12."),
         (:warn, "[Line 90] Could not parse period to Float64: -3.72637514028e-12."),
-        GravityModels.load(IcgemFile, "./icgem_test_files/invalid_gfct_data_lines.gfc")
+        GravityModels.load(IcgemFile, "./test/icgem_test_files/invalid_gfct_data_lines.gfc")
     )
 end
 

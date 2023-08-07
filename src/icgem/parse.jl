@@ -169,7 +169,7 @@ function parse_icgem(filename::AbstractString, T::DataType = Float64)
     ord  = 0
     clm  = Tf(0)
     slm  = Tf(0)
-    time = DateTime(now())
+    time = 0.0
 
     has_trend = false
     trend_clm = Tf(0)
@@ -426,7 +426,7 @@ function _parse_gfct_data_line(Tf, tokens, current_line)
     deg, ord, clm, slm = ret
 
     # Parse the time.
-    time = DateTime(tokens[end], dateformat"yyyymmdd")
+    time = (DateTime(tokens[end], dateformat"yyyymmdd") |> datetime2julian) - JD_J2000
 
     return deg, ord, clm, slm, time
 end

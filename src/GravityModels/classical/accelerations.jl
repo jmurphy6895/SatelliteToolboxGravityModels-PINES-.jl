@@ -3,7 +3,7 @@
 # Description
 # ==========================================================================================
 #
-#   Function to compute accelerations.
+#   Function to compute accelerations using the Classical Formulation.
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -17,7 +17,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 """
-    gravitational_acceleration(model::AbstractGravityModel{T}, r::AbstractVector, time::DateTime = DateTime("2000-01-01"); kwargs...) where T<:Number -> NTuple{3, T}
+    gravitational_acceleration(model::AbstractGravityModel{T}, r::AbstractVector, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
 
 Compute the gravitational acceleration [m / s²] represented in ITRF using the `model` in the
 position `r` [m], also represented in ITRF, at instant `time`. If the latter argument is
@@ -55,7 +55,8 @@ omitted, the J2000.0 epoch is used.
 function gravitational_acceleration(
     model::AbstractGravityModel{T},
     r::AbstractVector,
-    time::DateTime = DateTime("2000-01-01");
+    formulation::Val{:Classical},
+    time_since_JD2000_TT::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -67,7 +68,8 @@ function gravitational_acceleration(
     ∂U_∂r, ∂U_∂ϕ, ∂U_∂λ = gravitational_field_derivative(
         model,
         r,
-        time;
+        formulation,
+        time_since_JD2000_TT;
         max_degree = max_degree,
         max_order = max_order,
         P = P,
@@ -110,7 +112,7 @@ function gravitational_acceleration(
 end
 
 """
-    gravity_acceleration(model::AbstractGravityModel{T}, r::AbstractVector, time::DateTime = DateTime("2000-01-01"); kwargs...) where T<:Number -> NTuple{3, T}
+    gravity_acceleration(model::AbstractGravityModel{T}, r::AbstractVector, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
 
 Compute the gravity acceleration [m / s²] represented in ITRF using the `model` in the
 position `r` [m], also represented in ITRF, at instant `time`. If the latter argument is
@@ -148,7 +150,8 @@ omitted, the J2000.0 epoch is used.
 function gravity_acceleration(
     model::AbstractGravityModel{T},
     r::AbstractVector,
-    time::DateTime = DateTime("2000-01-01");
+    formulation::Val{:Classical},
+    time_since_JD2000_TT::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -161,7 +164,8 @@ function gravity_acceleration(
     grav_itrf = gravitational_acceleration(
         model,
         r,
-        time;
+        formulation,
+        time_since_JD2000_TT;
         max_degree = max_degree,
         max_order = max_order,
         P = P,

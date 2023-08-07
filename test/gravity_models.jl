@@ -14,9 +14,9 @@
 
 @testset "Gravitational Acceleration" verbose = true begin
     tests = (
-        (:EGM96, "./test_results/gravitation/EGM96.gdf"),
-        (:JGM2,  "./test_results/gravitation/JGM2.gdf"),
-        (:JGM3,  "./test_results/gravitation/JGM3.gdf")
+        (:EGM96, "./test/test_results/gravitation/EGM96.gdf"),
+        (:JGM2,  "./test/test_results/gravitation/JGM2.gdf"),
+        (:JGM3,  "./test/test_results/gravitation/JGM3.gdf")
     )
 
     for t in tests
@@ -35,7 +35,7 @@
 
                 # Use the model to compute the gravity using all the coefficients.
                 r_itrf = geodetic_to_ecef(lat, lon, 0)
-                g_norm = norm(GravityModels.gravitational_acceleration(model, r_itrf))
+                g_norm = norm(GravityModels.gravitational_acceleration(model, r_itrf, Val(:Classical)))
 
                 # Compare the results.
                 # TODO: Check why the precision is worse in the poles.
@@ -51,9 +51,9 @@ end
 
 @testset "Gravity Acceleration" verbose = true begin
     tests = (
-        (:EGM96, "./test_results/gravity/EGM96.gdf"),
-        (:JGM2,  "./test_results/gravity/JGM2.gdf"),
-        (:JGM3,  "./test_results/gravity/JGM3.gdf")
+        (:EGM96, "./test/test_results/gravity/EGM96.gdf"),
+        (:JGM2,  "./test/test_results/gravity/JGM2.gdf"),
+        (:JGM3,  "./test/test_results/gravity/JGM3.gdf")
     )
 
     for t in tests
@@ -72,7 +72,7 @@ end
 
                 # Use the model to compute the gravity using all the coefficients.
                 r_itrf = geodetic_to_ecef(lat, lon, 0)
-                g_norm = norm(GravityModels.gravity_acceleration(model, r_itrf))
+                g_norm = norm(GravityModels.gravity_acceleration(model, r_itrf, Val(:Classical)))
 
                 # Compare the results.
                 @test g_norm ≈ expected_g_norm atol = 1e-8
@@ -92,10 +92,10 @@ end
     r_itrf = [7000.0e3, 0, 0]
 
     P = zeros(10, 10)
-    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf; P = P)
+    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf, Val(:Classical); P = P)
 
     P  = zeros(361, 361)
     dP = zeros(10, 10)
-    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf; dP = dP)
-    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf; P = P, dP = dP)
+    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf, Val(:Classical); dP = dP)
+    @test_throws ArgumentError GravityModels.gravity_acceleration(egm96, r_itrf, Val(:Classical); P = P, dP = dP)
 end
