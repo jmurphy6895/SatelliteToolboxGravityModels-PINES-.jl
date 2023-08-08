@@ -44,12 +44,11 @@ be referred to as the classical model.
 """
 function gravitational_acceleration(
     model::AbstractGravityModel,
-    r::AbstractVector{T},
+    r::AbstractVector,
     formulation::Val{:Pines},
-    time::DateTime = DateTime("2000-01-01");
+    time::DateTime;
     max_degree::Number = -1,
-    max_order::Number = -1
-) where T
+    max_order::Number = -1)
     
     gravitational_acceleration(
         model,
@@ -64,12 +63,11 @@ end
 
 function gravitational_acceleration(
     model::AbstractGravityModel,
-    r::AbstractVector{T},
+    r::AbstractVector,
     formulation::Val{:Pines},
     time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
-    max_order::Number = -1
-) where T
+    max_order::Number = -1)
 
     accel = zeros(3)
 
@@ -126,12 +124,11 @@ omitted, the J2000.0 epoch is used.
 """
 function gravity_acceleration(
     model::AbstractGravityModel,
-    r::AbstractVector{T},
+    r::AbstractVector,
     formulation::Val{:Pines},
-    time::DateTime = DateTime("2000-01-01");
+    time::DateTime;
     max_degree::Number = -1,
-    max_order::Number = -1
-) where T
+    max_order::Number = -1)
     
     gravity_acceleration(
         model,
@@ -144,13 +141,13 @@ function gravity_acceleration(
 end
 
 function gravity_acceleration(
-    model::AbstractGravityModel{T},
-    r::AbstractVector,
+    model::AbstractGravityModel,
+    r::AbstractVector{T},
     formulation::Val{:Pines},
     time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1
-) where T<:Number
+) where T
 
     grav_itrf = gravitational_acceleration(
         model,
