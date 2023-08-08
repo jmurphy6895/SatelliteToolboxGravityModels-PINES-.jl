@@ -44,7 +44,7 @@ function gravitational_field_derivative(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     ::Val{:Classical},
-    time_since_JD2000_TT::Number = 0.0;
+    time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -182,7 +182,7 @@ function gravitational_field_derivative(
 
             # == Get the Spherical Harmonics Coefficients ==================================
 
-            clm, slm = coefficients(model, n, m, time_since_JD2000_TT)
+            clm, slm = coefficients(model, n, m, time_since_JD2000)
 
             CcSs_nm = clm * cos_mλ + slm * sin_mλ
             ScCs_nm = slm * cos_mλ - clm * sin_mλ

@@ -56,7 +56,7 @@ function gravitational_acceleration(
     model::AbstractGravityModel{T},
     r::AbstractVector,
     formulation::Val{:Classical},
-    time_since_JD2000_TT::Number = 0.0;
+    time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -69,7 +69,7 @@ function gravitational_acceleration(
         model,
         r,
         formulation,
-        time_since_JD2000_TT;
+        time_since_JD2000;
         max_degree = max_degree,
         max_order = max_order,
         P = P,
@@ -151,7 +151,7 @@ function gravity_acceleration(
     model::AbstractGravityModel{T},
     r::AbstractVector,
     formulation::Val{:Classical},
-    time_since_JD2000_TT::Number = 0.0;
+    time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -165,7 +165,7 @@ function gravity_acceleration(
         model,
         r,
         formulation,
-        time_since_JD2000_TT;
+        time_since_JD2000;
         max_degree = max_degree,
         max_order = max_order,
         P = P,

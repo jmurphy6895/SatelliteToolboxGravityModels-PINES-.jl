@@ -35,7 +35,7 @@ function gravitational_potential(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     formulation::Val{:Pines},
-    time::DateTime = DateTime("2000-01-01");
+    time::DateTime;
     max_degree::Number = -1,
     max_order::Number = -1) where T<:Number
 
@@ -80,7 +80,7 @@ function gravitational_potential_time_derivative(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     formulation::Val{:Pines},
-    time::DateTime = DateTime("2000-01-01");
+    time::DateTime;
     max_degree::Number = -1,
     max_order::Number = -1) where T<:Number
 

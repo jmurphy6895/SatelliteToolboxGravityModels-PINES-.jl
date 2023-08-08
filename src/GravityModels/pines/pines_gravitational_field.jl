@@ -42,17 +42,16 @@ be referred to as the classical model.
 - `T`: The derivative of the gravitational field w.r.t. the geocentric latitude (`∂U/∂ϕ`).
 - `T`: The derivative of the gravitational field w.r.t. the longitude (`∂U/∂λ`).
 """
-function gravitational_field_datetime!(
+function gravitational_field!(
     model::AbstractGravityModel,
-    r::AbstractVector{T},
+    r::AbstractVector,
     formulation::Val{:Pines},
-    time::DateTime = DateTime("2000-01-01");
+    time::DateTime;
     max_degree::Number = -1,
     max_order::Number = -1,
     U::Union{Nothing, Number} = nothing,
     F::Union{Nothing, AbstractVector} = nothing,
-    Uₜ::Union{Nothing, Number} = nothing
-) where T
+    Uₜ::Union{Nothing, Number} = nothing)
 
     JD = time |> datetime2julian
     time_since_JD2000 = JD - JD_J2000
@@ -80,8 +79,7 @@ function gravitational_field!(
     max_order::Number = -1,
     U::Union{Nothing, Number} = nothing,
     F::Union{Nothing, AbstractVector} = nothing,
-    Uₜ::Union{Nothing, Number} = nothing
-) where T<:Number
+    Uₜ::Union{Nothing, Number} = nothing) where T<:Number
 
 
     # Unpack gravity model data
@@ -274,7 +272,7 @@ function auxilary_variable(n_max::Int)
     return aux1, aux2, aux3, aux4
 end
 
-function IAU06_err(MJDA_TT, MJDB_TT)
+function IAU06_err(MJDA_TT::Number, MJDB_TT::Number)
 
     c0 =   4612.156534
     c1 =   2.7831634
