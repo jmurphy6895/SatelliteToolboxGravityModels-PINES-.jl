@@ -31,11 +31,11 @@ at instant `time`. If the latter argument is omitted, the J2000.0 epoch is used.
     coefficients, reducing the allocations. If it is `nothing`, the matrix will be created
     when calling the function.
 """
-function gravity_potential(
+function gravitational_potential(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     formulation::Val{:Classical},
-    time_since_JD2000_TT::Number = 0.0;
+    time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     P::Union{Nothing, AbstractMatrix} = nothing,
@@ -151,7 +151,7 @@ function gravity_potential(
             # Get the spherical harmonics coefficients
             # ==============================================================================
 
-            clm, slm = coefficients(model, n, m, time_since_JD2000_TT)
+            clm, slm = coefficients(model, n, m, time_since_JD2000)
 
             aux_U += P[n+1, m+1] * (clm * cos_mλ + slm * sin_mλ)
 

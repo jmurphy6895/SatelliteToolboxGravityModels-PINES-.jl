@@ -6,6 +6,7 @@
 
 module GravityModels
 
+using SpecialFunctions
 using Dates
 using ReferenceFrameRotations
 using SatelliteToolboxBase
@@ -27,5 +28,9 @@ include("./api.jl")
 include("./classical/accelerations.jl")
 include("./classical/gravitational_field_derivative.jl")
 include("./classical/gravitational_potential.jl")
+
+include("./pines/pines_accelerations.jl")
+include("./pines/pines_gravitational_field.jl")
+include("./pines/pines_potential.jl")
 
 end # module GravityModels

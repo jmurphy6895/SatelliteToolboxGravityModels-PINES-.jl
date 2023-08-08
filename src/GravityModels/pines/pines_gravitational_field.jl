@@ -7,7 +7,7 @@
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 """
-    gravitational_field(model::AbstractGravityModel{T}, r::AbstractVector, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
+    gravitational_field!(model::AbstractGravityModel{T}, r::AbstractVector, formulation::Val{:Pines}, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
 
 Compute the gravitational field derivative [SI] with respect to the spherical coordinates
 (`∂U/∂r`, `∂U/∂ϕ`, `∂U/∂λ`) using the `model` in the position `r` [m], represented in ITRF,
@@ -42,7 +42,7 @@ be referred to as the classical model.
 - `T`: The derivative of the gravitational field w.r.t. the geocentric latitude (`∂U/∂ϕ`).
 - `T`: The derivative of the gravitational field w.r.t. the longitude (`∂U/∂λ`).
 """
-function gravitational_field(
+function gravitational_field_datetime!(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     formulation::Val{:Pines},
@@ -52,15 +52,16 @@ function gravitational_field(
     U::Union{Nothing, Number} = nothing,
     F::Union{Nothing, AbstractVector} = nothing,
     Uₜ::Union{Nothing, Number} = nothing
-)
-    JD = time |> datetime2julian
-    time_since_JD2000_TT = JD - JD_J2000
+) where T
 
-    return gravitational_field(
+    JD = time |> datetime2julian
+    time_since_JD2000 = JD - JD_J2000
+
+    return gravitational_field!(
         model,
         r,
         formulation,
-        time_since_JD2000_TT;
+        time_since_JD2000;
         max_degree = max_degree,
         max_order = max_order,
         U = U,
@@ -70,11 +71,11 @@ function gravitational_field(
 end
 
 
-function gravitational_field(
+function gravitational_field!(
     model::AbstractGravityModel,
     r::AbstractVector{T},
     formulation::Val{:Pines},
-    time_since_JD2000_TT::Number = 0.0;
+    time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
     U::Union{Nothing, Number} = nothing,
@@ -85,7 +86,6 @@ function gravitational_field(
 
     # Unpack gravity model data
     # ======================================================================================
-
     μ  = gravity_constant(model)
     R₀ = radius(model)
     model_max_degree = maximum_degree(model)
@@ -117,39 +117,49 @@ function gravitational_field(
 
     # Fill Anm Matrix
     Anm = @MMatrix zeros(n_max + 3, n_max + 3)
-    @. Anm[1, 1] = 1.0
-    @. Anm[2, 2] = 1.0
-    @. Anm[2, 1] = u
+    Anm[1, 1] = 1.0
+    Anm[2, 2] = 1.0
+    Anm[2, 1] = u
 
-    @inbounds for i ∈ 2:n_max + 2
+    @inbounds for n ∈ 2:n_max + 2
         # Fill the Diagonal
-        @. Anm[n+1, n+1] = aux1[n] * Anm[n, n]
+        Anm[n+1, n+1] = aux1[n] * Anm[n, n]
         # Fill the First columns
-        @. Anm[n+1, 1] = aux2[n] * u * Anm[n,1] - aux3[n] * Anm[n-1, 1]
+        Anm[n+1, 1] = aux2[n] * u * Anm[n,1] - aux3[n] * Anm[n-1, 1]
         # Fill the Subdiagonal
-        @. Anm[n+1, n] = u * Anm[n+1, n+1]
+        Anm[n+1, n] = u * Anm[n+1, n+1]
     end
 
     @inbounds for n ∈ 3:n_max + 2
         for m ∈ 1:n-2
-            @. Anm[n+1, m+1] = aux4[n,m] * Anm[n,m] + u * Anm[n, m+1]
+            Anm[n+1, m+1] = aux4[n,m] * Anm[n,m] + u * Anm[n, m+1]
         end
     end
+
+    #println(Anm)
 
     # Fill R, I, and P Vectors
     Rm = zeros(n_max)
     Im = zeros(n_max)
-    Pn = zeros(n_max)
+    Pn = zeros(n_max + 1)
 
-    @. Rm[1] = 1.0
-    @. Pn[1] = μ/r_gc
+    Rm[1] = 1.0
+    Pn[1] = μ/r_gc
+    Pn[2] = ratio * Pn[1]
     for n ∈ 2:n_max
-        @. Rm[n] = s * Rm[n-1] - t * Im[n-1]
-        @. Im[n] = s * Im[n-1] + t * Rm[n-1]
-        @. Pn[n+1] = ρ * Pn[n]
+        Rm[n] = s * Rm[n-1] - t * Im[n-1]
+        Im[n] = s * Im[n-1] + t * Rm[n-1]
+        Pn[n+1] = ratio * Pn[n]
     end
 
-    Cnm, Snm = coefficients(model, n, m, time_since_JD2000_TT)
+    Cnm = zeros(n_max, n_max + 1)
+    Snm = zeros(n_max, n_max + 1)
+
+    for i ∈ 1:n_max
+        for j ∈ 1:min(i, m_max)
+            Cnm[i,j], Snm[i,j] = coefficients(model, i, j, time_since_JD2000) ./ norm_fact(i, j)
+        end
+    end
 
     # Fill D, E, and F Matrices
     Dnm = zeros(n_max, n_max+1)
@@ -160,16 +170,18 @@ function gravitational_field(
 
     for m ∈ 2:m_max
         for n ∈ m:n_max
-            @. Dnm[n, m] = Cnm[n, m]*Rm[m - 1] + Snm[n, m]*Im[m-1]
+            Dnm[n, m] = Cnm[n, m]*Rm[m - 1] + Snm[n, m]*Im[m-1]
             if !skip_EF
-                @. Enm[n, m] = Cnm[n, m]*Rm[m-1] + Snm[n, m]*Im[m-1]
-                @. Fnm[n, m] = S[n, m]*Rm[m-1] - Cnm[n, m]*Im[m-1]
+                Enm[n, m] = Cnm[n, m]*Rm[m-1] + Snm[n, m]*Im[m-1]
+                Fnm[n, m] = Snm[n, m]*Rm[m-1] - Cnm[n, m]*Im[m-1]
             end
         end
     end
     for n ∈ 1:n_max
-        @. Dnm[n, 1] = Cnm[n, 1]*Rm[1]
+        Dnm[n, 1] = Cnm[n, 1]*Rm[1]
     end
+
+    println(Dnm)
 
     ###############################################################################
     #* Perturbing potential
@@ -183,7 +195,7 @@ function gravitational_field(
         end
 
         for n ∈ 1:n_max
-            U += Pn[n] * Anm[n, m] * Dnm[n, 1]
+            U += Pn[n] * Anm[n, 1] * Dnm[n, 1]
         end
 
         U *= -1.0
@@ -197,17 +209,17 @@ function gravitational_field(
         for m ∈ 1:m_max
             for n ∈ m:n_max
                 a += [Pn[n+1] * Anm[n,m] * m * Enm[n,m];
-                    Pn[n+1] * Anm[n,m] * m * Fnm[n,m];
-                    Pn[n+1] * Anm[n,m+1]   * Dnm[n,m];
-                    -Pn[n+1] * Anm[n+1,m+1] * Dnm[n,m]]
+                      Pn[n+1] * Anm[n,m] * m * Fnm[n,m];
+                      Pn[n+1] * Anm[n,m+1]   * Dnm[n,m];
+                     -Pn[n+1] * Anm[n+1,m+1] * Dnm[n,m]]
             end
         end
 
         for n ∈ 1:n_max
             a += [0.0;
-                0.0;
-                Pn[n+1] * Anm[n, 2]   * Dnm[n, 1];
-                -Pn[n+1] * Anm[n+1, 2] * Dnm[n, 1]]
+                  0.0;
+                  Pn[n+1] * Anm[n, 2]   * Dnm[n, 1];
+                 -Pn[n+1] * Anm[n+1, 2] * Dnm[n, 1]]
         end
 
         F .= (@view(a[1:3]) + [s; t; u] * a[4]) / R₀
@@ -223,7 +235,7 @@ function gravitational_field(
         Gnm = zeros(n_max, n_max)
         for m ∈ 1:m_max
             for n ∈ m:n_max
-                @. Gnm[n,m] = (m * (t * Enm[n,m] - s * Fnm[n,m])) * err_nd
+                Gnm[n,m] = (m * (t * Enm[n,m] - s * Fnm[n,m])) * err_nd
                 Uₜ += Pn[n] * Anm[n,m] * Gnm[n,m]
             end
         end
@@ -233,15 +245,27 @@ function gravitational_field(
 
 end
 
+function norm_fact(l::Int, m::Int)
+
+    kron = (m == 0) ? 1.0 : 0.0
+
+    numer = gamma(l + m + 1.0)
+    denom = (2.0 - kron) * (2.0 * l + 1.0) * gamma(l - m + 1.0)
+
+    return √(numer/denom)
+
+end
+
+
 function auxilary_variable(n_max::Int)
     aux1 = zeros(n_max)
     aux2 = zeros(n_max)
     aux3 = zeros(n_max)
     aux4 = zeros(n_max, n_max + 1)
     for n ∈ 1:n_max
-        aux1 = 2.0*n + 1.0
-        aux2 = aux1[n] / (n + 1.0)
-        aux3 = n / (n + 1)
+        aux1[n] = 2.0*n + 1.0
+        aux2[n] = aux1[n] / (n + 1.0)
+        aux3[n] = n / (n + 1)
         for m ∈ 1:n
             aux4[n, m] = n + m
         end

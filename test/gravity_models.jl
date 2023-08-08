@@ -32,13 +32,16 @@
                 # Use the model to compute the gravity using all the coefficients.
                 r_itrf = geodetic_to_ecef(lat, lon, 0)
                 g_norm = norm(GravityModels.gravitational_acceleration(model, r_itrf, Val(:Classical)))
+                g_norm_pines = norm(GravityModels.gravitational_acceleration(model, r_itrf, Val(:Pines)))
 
                 # Compare the results.
                 # TODO: Check why the precision is worse in the poles.
                 if abs(lat) ≈ π/2
                     @test g_norm ≈ expected_g_norm atol = 5e-8
+                    @test g_norm_pines ≈ expected_g_norm atol = 5e-8
                 else
                     @test g_norm ≈ expected_g_norm atol = 1e-13
+                    @test g_norm_pines ≈ expected_g_norm atol = 1e-13
                 end
             end
         end
@@ -69,9 +72,11 @@ end
                 # Use the model to compute the gravity using all the coefficients.
                 r_itrf = geodetic_to_ecef(lat, lon, 0)
                 g_norm = norm(GravityModels.gravity_acceleration(model, r_itrf, Val(:Classical)))
+                g_norm_pines = norm(GravityModels.gravity_acceleration(model, r_itrf, Val(:Pines)))
 
                 # Compare the results.
                 @test g_norm ≈ expected_g_norm atol = 1e-8
+                @test g_norm_pines ≈ expected_g_norm atol = 1e-8
             end
         end
     end
