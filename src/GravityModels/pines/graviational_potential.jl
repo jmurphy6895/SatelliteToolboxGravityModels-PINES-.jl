@@ -58,7 +58,7 @@ function gravitational_potential(
     max_degree::Number = -1,
     max_order::Number = -1) where T<:Number
 
-    U = 0.0
+    U = T(0)
 
     gravitational_field!(
         model,
@@ -102,7 +102,7 @@ function gravitational_potential_time_derivative(
     max_degree::Number = -1,
     max_order::Number = -1) where T<:Number
 
-    Uₜ = 0.0
+    Uₜ = T(0)
 
     gravitational_field!(
         model,
