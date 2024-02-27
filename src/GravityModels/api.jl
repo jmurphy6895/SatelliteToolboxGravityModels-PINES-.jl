@@ -1,19 +1,20 @@
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+## Description #############################################################################
 #
-# Description
-# ==========================================================================================
+# Define the API functions for the gravity models.
 #
-#   Define the API functions for the gravity models.
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+############################################################################################
 
 """
-    coefficients(model::AbstractGravityModel{T}, degree::Int, order::Int, time::DataTime) where T<:Number -> T, T
+    coefficients(model::AbstractGravityModel{T}, degree::Int, order::Int, time::DateTime = DateTime("2000-01-01")) where T<:Number -> T, T
 
 Return the `Clm` and `Slm` coefficients of the gravity `model` for the specified `degree`,
-`order`, and `time`.
+`order`, and `time`. If the latter argument is omitted, the J2000.0 epoch is used.
 """
 function coefficients end
+
+function coefficients(model::AbstractGravityModel, degree::Int, order::Int)
+    return coefficients(model, degree, order, DateTime("2000-01-01"))
+end
 
 """
     coefficient_norm(model::AbstractGravityModel) where T<:Number -> Symbol
