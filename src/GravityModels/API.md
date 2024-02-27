@@ -25,7 +25,7 @@ specified `degree`, `order`, and `time`. Hence:
 coefficients(model, 10, 8, DateTime("2023-06-19"))
 ```
 ```julia
-coefficients(model, 10, 8, (DateTime("2023-06-19") |> datetime2julia) - JD_J2000)
+coefficients(model, 10, 8, (DateTime("2023-06-19") |> datetime2julian) - JD_J2000)
 coefficients(model, 10, 8, 8569.5)
 ```
 

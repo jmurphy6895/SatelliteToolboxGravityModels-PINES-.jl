@@ -6,7 +6,7 @@
 #   Function to compute the gravitational field derivative.
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-"""
+    """
     gravitational_field!(model::AbstractGravityModel{T}, r::AbstractVector, formulation::Val{:Pines}, time_since_JD2000_TT::Number = 0.0; kwargs...) where T<:Number -> NTuple{3, T}
 
 Compute the gravitational field derivative [SI] with respect to the spherical coordinates
@@ -42,6 +42,9 @@ be referred to as the classical model.
 - `T`: The derivative of the gravitational field w.r.t. the geocentric latitude (`∂U/∂ϕ`).
 - `T`: The derivative of the gravitational field w.r.t. the longitude (`∂U/∂λ`).
 """
+MJD_J2000 = 51545.0
+ωE = 7.292_115_146_706_979e-5
+
 function gravitational_field!(
     model::AbstractGravityModel,
     r::AbstractVector,
@@ -49,9 +52,9 @@ function gravitational_field!(
     time::DateTime;
     max_degree::Number = -1,
     max_order::Number = -1,
-    U::Union{Nothing, Number} = nothing,
+    U::Union{Nothing, AbstractVector} = nothing,
     F::Union{Nothing, AbstractVector} = nothing,
-    Uₜ::Union{Nothing, Number} = nothing)
+    Uₜ::Union{Nothing, AbstractVector} = nothing)
 
     JD = time |> datetime2julian
     time_since_JD2000 = JD - JD_J2000
@@ -77,9 +80,9 @@ function gravitational_field!(
     time_since_JD2000::Number = 0.0;
     max_degree::Number = -1,
     max_order::Number = -1,
-    U::Union{Nothing, Number} = nothing,
+    U::Union{Nothing, AbstractVector} = nothing,
     F::Union{Nothing, AbstractVector} = nothing,
-    Uₜ::Union{Nothing, Number} = nothing) where T<:Number
+    Uₜ::Union{Nothing, AbstractVector} = nothing) where T<:Number
 
 
     # Unpack gravity model data
@@ -90,6 +93,9 @@ function gravitational_field!(
 
     # Process the inputs
     # ======================================================================================
+
+    DU = R₀
+    TU = √(μ/DU^3)
 
     # Check maximum degree value.
     if (max_degree < 0) || (max_degree > model_max_degree)
@@ -102,8 +108,8 @@ function gravitational_field!(
     end
 
     # Obtain the degree and order used for the computation.
-    n_max = max_degree
-    m_max = max_order
+    n_max = max_degree + 1
+    m_max = max_order + 1
 
     r_gc = norm(r)
     s, t, u = r ./ r_gc
@@ -111,92 +117,65 @@ function gravitational_field!(
     # Auxiliary variables.
     ratio = R₀ / r_gc
 
-    aux1, aux2, aux3, aux4 = auxilary_variable(n_max)
-
     # Fill Anm Matrix
-    Anm = @MMatrix zeros(n_max + 3, n_max + 3)
-    Anm[1, 1] = 1.0
-    Anm[2, 2] = 1.0
-    Anm[2, 1] = u
-
-    @inbounds for n ∈ 2:n_max + 2
-        # Fill the Diagonal
-        Anm[n+1, n+1] = aux1[n] * Anm[n, n]
-        # Fill the First columns
-        Anm[n+1, 1] = aux2[n] * u * Anm[n,1] - aux3[n] * Anm[n-1, 1]
-        # Fill the Subdiagonal
-        Anm[n+1, n] = u * Anm[n+1, n+1]
-    end
-
-    @inbounds for n ∈ 3:n_max + 2
-        for m ∈ 1:n-2
-            Anm[n+1, m+1] = aux4[n,m] * Anm[n,m] + u * Anm[n, m+1]
-        end
-    end
-
-    #println(Anm)
+    Anm = fully_normalized_derived_legendre(u, n_max, m_max)
 
     # Fill R, I, and P Vectors
-    Rm = zeros(n_max)
-    Im = zeros(n_max)
-    Pn = zeros(n_max + 1)
+    Rm = zeros(n_max+1)
+    Im = zeros(n_max+1)
+    ρn = zeros(n_max+2)
 
     Rm[1] = 1.0
-    Pn[1] = μ/r_gc
-    Pn[2] = ratio * Pn[1]
-    for n ∈ 2:n_max
+    ρn[1] = μ/r_gc
+    ρn[2] = ratio * ρn[1]
+    for n ∈ 2:n_max+1
         Rm[n] = s * Rm[n-1] - t * Im[n-1]
         Im[n] = s * Im[n-1] + t * Rm[n-1]
-        Pn[n+1] = ratio * Pn[n]
+        ρn[n+1] = ratio * ρn[n]
     end
 
-    Cnm = zeros(n_max, n_max + 1)
-    Snm = zeros(n_max, n_max + 1)
+    Cnm = zeros(n_max, m_max)
+    Snm = zeros(n_max, m_max)
 
-    for i ∈ 1:n_max
+    @inbounds for i ∈ 1:n_max
         for j ∈ 1:min(i, m_max)
-            Cnm[i,j], Snm[i,j] = coefficients(model, i, j, time_since_JD2000) ./ norm_fact(i, j)
+            Cnm[i,j], Snm[i,j] = coefficients(model, i, j, time_since_JD2000)
         end
     end
 
     # Fill D, E, and F Matrices
-    Dnm = zeros(n_max, n_max+1)
-    Enm = zeros(n_max, n_max+1)
-    Fnm = zeros(n_max, n_max+1)
+    Dnm = zero(Anm)
+    Enm = zero(Anm)
+    Fnm = zero(Anm)
+
+    for n in 1:n_max
+        for m in 1:min(n, m_max)
+            Dnm[n, m] = Cnm[n, m]*Rm[m] + Snm[n, m]*Im[m]
+        end
+    end
 
     skip_EF = F === nothing && Uₜ === nothing
-
-    for m ∈ 2:m_max
-        for n ∈ m:n_max
-            Dnm[n, m] = Cnm[n, m]*Rm[m - 1] + Snm[n, m]*Im[m-1]
-            if !skip_EF
+    if !skip_EF
+        for n in 1:n_max
+            for m in 2:min(n, m_max)
                 Enm[n, m] = Cnm[n, m]*Rm[m-1] + Snm[n, m]*Im[m-1]
                 Fnm[n, m] = Snm[n, m]*Rm[m-1] - Cnm[n, m]*Im[m-1]
             end
         end
     end
-    for n ∈ 1:n_max
-        Dnm[n, 1] = Cnm[n, 1]*Rm[1]
-    end
-
-    println(Dnm)
 
     ###############################################################################
     #* Perturbing potential
     ###############################################################################
     if U !== nothing
-        U = 0.0
-        for m ∈ 1:m_max
-            for n ∈ m:n_max
-                U += Pn[n] * Anm[n, m] * Dnm[n, m]
+        U[1] = 0.0
+        for n ∈ 2:n_max
+            for m ∈ 1:min(m_max, n)
+                U[1] += ρn[n] * Anm[n, m] * Dnm[n, m]
             end
         end
 
-        for n ∈ 1:n_max
-            U += Pn[n] * Anm[n, 1] * Dnm[n, 1]
-        end
-
-        U *= -1.0
+        U[1] *= -1.0
     end
 
     ###############################################################################
@@ -204,72 +183,44 @@ function gravitational_field!(
     ###############################################################################
     if F !== nothing
         a = zeros(4)
-        for m ∈ 1:m_max
-            for n ∈ m:n_max
-                a += [Pn[n+1] * Anm[n,m] * m * Enm[n,m];
-                      Pn[n+1] * Anm[n,m] * m * Fnm[n,m];
-                      Pn[n+1] * Anm[n,m+1]   * Dnm[n,m];
-                     -Pn[n+1] * Anm[n+1,m+1] * Dnm[n,m]]
+        for n ∈ 2:n_max
+            for m ∈ 1:min(m_max, n)
+                n1q = √(((n - m) * ((m == 1) + 1.0) * (n + m - 1.0)) / 2.0)
+                n2q = √(((n + m + 2.0) * (n + m + 1.0) * (2.0*n - 1.0) * ((m == 1) + 1.0)) / ((2.0*n + 1.0) * 2.0))
+
+                println(n, ", ", m, ": ", n1q)
+                println(n, ", ", m, ": ", n2q)
+
+                a += [ρn[n+1] * Anm[n,m] * m * Enm[n,m];
+                      ρn[n+1] * Anm[n,m] * m * Fnm[n,m];
+                      ρn[n+1] * n1q * Anm[n,m+1]   * Dnm[n,m];
+                     -ρn[n+1] * n2q * Anm[n+1,m+1] * Dnm[n,m]]
             end
         end
 
-        for n ∈ 1:n_max
-            a += [0.0;
-                  0.0;
-                  Pn[n+1] * Anm[n, 2]   * Dnm[n, 1];
-                 -Pn[n+1] * Anm[n+1, 2] * Dnm[n, 1]]
-        end
-
-        F .= (@view(a[1:3]) + [s; t; u] * a[4]) / R₀
+        F[1:3] = (@view(a[1:3]) + [s; t; u] * a[4]) / R₀
     end
 
     ###############################################################################
     #* Time derivative of potential in body-fixed frame
     ###############################################################################
     if Uₜ !== nothing
-        Uₜ = 0.0
-        err_nd = IAU06_err(0.0, MDJ_TT) / TU
+        Uₜ[1] = 0.0
+        err_nd = IAU06_err(0.0, time_since_JD2000) / TU
 
         Gnm = zeros(n_max, n_max)
         for m ∈ 1:m_max
-            for n ∈ m:n_max
+            for n ∈ 1:m
                 Gnm[n,m] = (m * (t * Enm[n,m] - s * Fnm[n,m])) * err_nd
-                Uₜ += Pn[n] * Anm[n,m] * Gnm[n,m]
+                Uₜ[1] += ρn[n] * Anm[n,m] * Gnm[n,m]
             end
         end
+
+        Uₜ[1] *= -1
     end
 
     return nothing
-
-end
-
-function norm_fact(l::Int, m::Int)
-
-    kron = (m == 0) ? 1.0 : 0.0
-
-    numer = gamma(l + m + 1.0)
-    denom = (2.0 - kron) * (2.0 * l + 1.0) * gamma(l - m + 1.0)
-
-    return √(numer/denom)
-
-end
-
-
-function auxilary_variable(n_max::Int)
-    aux1 = zeros(n_max)
-    aux2 = zeros(n_max)
-    aux3 = zeros(n_max)
-    aux4 = zeros(n_max, n_max + 1)
-    for n ∈ 1:n_max
-        aux1[n] = 2.0*n + 1.0
-        aux2[n] = aux1[n] / (n + 1.0)
-        aux3[n] = n / (n + 1)
-        for m ∈ 1:n
-            aux4[n, m] = n + m
-        end
-    end
-
-    return aux1, aux2, aux3, aux4
+    
 end
 
 function IAU06_err(MJDA_TT::Number, MJDB_TT::Number)
@@ -290,3 +241,28 @@ function IAU06_err(MJDA_TT::Number, MJDB_TT::Number)
     return ωE + δ̇
 
 end
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# Description
+# ==========================================================================================
+#
+#   Compute the derived Legendre functions with full normalization.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# References
+# ==========================================================================================
+#
+#   [1] Holmes, S. A. and W. E. Featherstone, 2002. A unified approach to the Clenshaw
+#       summation and the recursive computation of very high degree and order normalised
+#       associated Legendre functions. Journal of Geodesy, 76(5), pp. 279-299.
+#
+#       For more info.: http://mitgcm.org/~mlosch/geoidcookbook/node11.html
+#
+#   [2] Vallado, D. A (2013). Fundamentals of Astrodynamics and Applications. Microcosm
+#       Press, Hawthorn, CA, USA.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+

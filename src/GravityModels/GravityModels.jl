@@ -29,8 +29,8 @@ include("./classical/accelerations.jl")
 include("./classical/gravitational_field_derivative.jl")
 include("./classical/gravitational_potential.jl")
 
-include("./pines/pines_accelerations.jl")
-include("./pines/pines_gravitational_field.jl")
-include("./pines/pines_potential.jl")
+include("./pines/accelerations.jl")
+include("./pines/gravitational_field.jl")
+include("./pines/graviational_potential.jl")
 
 end # module GravityModels
